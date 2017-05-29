@@ -1,5 +1,7 @@
 'use strict';
 
+var _ = require('lodash');
+
 const OPERATOR_REGEX = /^(-|\+|\*{1,2}|\\|\/|#|&|!|_|\?|'*<=*|'*>=*|'*\[|'*\]{1,2}|\(|\)|'*=|'|\${1,2}|\^|,|:|@)/;
 const STRING_REGEX = /^("+)/;
 const CHARACTER_REGEX = /^([A-Za-z0-9\.%]+)/;
@@ -29,7 +31,7 @@ class LineTokens {
                 isString = !isString;
             } else if (this.line[index] === ';' && !isString) {
                 this.comment = this.line.slice(index + 1).trim();
-                this.line = this.line.slice(0, index).trim();
+                this.line = _.trimEnd(this.line.slice(0, index));
                 break;
             }
             index += 1;
