@@ -13,8 +13,8 @@ class MUMPSCompiler {
     compile(fileName) {
         this.lines = this.readFile(fileName);
         this.tokens = this.lines.map((line, index) => (new LineTokens(line, index)));
-        this.abstractSyntaxTrees = this.tokens.map(tokens => (new AbstractSyntaxTree(tokens)));
-        console.log(util.inspect(this.abstractSyntaxTrees, { depth: null, colors: true }));
+        this.abstractSyntaxTree = new AbstractSyntaxTree(this.tokens);
+        console.log(util.inspect(this.abstractSyntaxTree, { depth: null, colors: true }));
     }
 }
 
