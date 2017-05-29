@@ -89,9 +89,8 @@ class LineTokens {
         return chunks;
     }
     createTokenGroups() {
-        // this.chunks = this.line.split(/[\s]+/);
         this.chunks = this.createChunks(this.line);
-        console.log(this.chunks);
+        // console.log(this.chunks);
         this.tokenGroups = this.chunks.map((chunk) => {
             const tokens = [];
             let currChunk = chunk;
