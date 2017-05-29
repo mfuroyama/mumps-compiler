@@ -2,7 +2,8 @@
 
 const OPERATOR_REGEX = /^(-|\+|\*{1,2}|\\|\/|#|&|!|_|\?|'*<=*|'*>=*|'*\[|'*\]{1,2}|\(|\)|'*=|'|\${1,2}|\^|,|:|@)/;
 const STRING_REGEX = /^("+)/;
-const CHARACTER_REGEX = /^([A-Za-z0-9\.]+)/;
+const CHARACTER_REGEX = /^([A-Za-z0-9\.%]+)/;
+const SPACE_REGEX = /^(\s+)/;
 
 class LineTokens {
     constructor(line, index) {
@@ -54,34 +55,47 @@ class LineTokens {
         // split function that handles quote-captured spaces. The strategy here is to iterate
         // one character at a time and build substrings as we go, noting the "is string" state
         // as we iterate
+        let currLine = line;
         let chunks = [];
-        let index = 0;
         let quoteCount = 0;
         let currChunk = '';
-        while (index < line.length) {
-            // If the current character is a quote mark, keep track of the quote and append the
-            // character
-            if (line[index] === '"') {
-                currChunk += line[index];
-                quoteCount += 1;
+
+        while (currLine.length > 0) {
+            const currChar = currLine[0];
+            if (currChar === '"') {
+                const quoteMatch = currLine.match(STRING_REGEX);
+                const quotes = quoteMatch[0];
+
+                currChunk += quotes;
+                quoteCount += quotes.length;
+                currLine = currLine.slice(quotes.length);
             }
 
             // If the current character is a space, then check if we're "in quotes" and capturing
             // spaces. If so, just append, otherwise, add the current substring to the list of
             // chunks, if the string isn't empty.
-            else if (line[index] === ' ') {
-                if (quoteCount % 2 !== 0) {
-                    currChunk += line[index];
-                }
-                else if (currChunk !== '') {
+            else if (currChar === ' ') {
+                const spaceMatch = currLine.match(SPACE_REGEX);
+                const spaces = spaceMatch[0];
+
+                if (quoteCount % 2 === 0) {
                     chunks.push(currChunk);
+                    if (spaces.length > 1) {
+                        chunks.push(spaces);
+                    }
                     currChunk = '';
                 }
+                else {
+                    currChunk += spaces;
+                }
+
+                currLine = currLine.slice(spaces.length);
             }
+
             else {
-                currChunk += line[index];
+                currChunk += currChar;
+                currLine = currLine.slice(1);
             }
-            index += 1;
         }
         if (currChunk !== '') {
             chunks.push(currChunk);
@@ -158,8 +172,17 @@ class LineTokens {
                     })
                 }
 
-                if (!operatorMatch && !stringMatch && !charMatch) {
-                    throw new Error(`Invalid syntax error, line ${this.index}: ${this.line}`);
+                const spaceMatch = (currChunk[0] === ' ');
+                if (spaceMatch) {
+                    tokens.push({
+                        value: '',
+                        type: 'SEPARATOR',
+                    });
+                    currChunk = '';
+                }
+
+                if (!operatorMatch && !stringMatch && !charMatch && !spaceMatch) {
+                    throw new Error(`Invalid syntax error, line ${this.index}: ${this.line} ${JSON.stringify(tokens)}`);
                 }
             }
             return tokens;
