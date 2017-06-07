@@ -1,0 +1,108 @@
+{
+  "type": "Program",
+  "body": [
+
+        {
+          "type": "VariableDeclaration",
+          "declarations": [
+            {
+              "type": "VariableDeclarator",
+              "id": {
+                "type": "Identifier",
+                "name": "mod"
+              },
+              "init": {
+                "type": "CallExpression",
+                "callee": {
+                  "type": "Identifier",
+                  "name": "require"
+                },
+                "arguments": [
+                  {
+                    "type": "StringLiteral",
+                    "extra": {
+                      "rawValue": "./mod",
+                      "raw": "'./mod'"
+                    },
+                    "value": "./mod"
+                  }
+                ]
+              }
+            }
+          ],
+          "kind": "const"
+        },
+    {
+      "type": "FunctionDeclaration",
+      "id": {
+        "type": "Identifier",
+        "name": "myFunction"
+      },
+      "params": [
+        {
+          "type": "Identifier",
+          "name": "check"
+        },
+        {
+          "type": "Identifier",
+          "name": "bar"
+        }
+      ],
+      "body": {
+        "type": "BlockStatement",
+        "body": [
+          {
+            "type": "VariableDeclaration",
+            "declarations": [
+              {
+                "type": "VariableDeclarator",
+                "id": {
+                  "type": "Identifier",
+                  "name": "x"
+                },
+                "init": {
+                  "type": "NumericLiteral",
+                  "value": 1,
+                  "raw": "1"
+                }
+              }
+            ],
+            "kind": "var"
+          },
+          {
+            "type": "ExpressionStatement",
+            "expression": {
+              "type": "CallExpression",
+              "callee": {
+                "type": "MemberExpression",
+                "computed": false,
+                "object": {
+                  "type": "Identifier",
+                  "name": "console"
+                },
+                "property": {
+                  "type": "Identifier",
+                  "name": "log"
+                }
+              },
+              "arguments": [
+                {
+                  "type": "Identifier",
+                  "name": "x"
+                }
+              ]
+            }
+          },
+          {
+            "type": "ReturnStatement",
+            "argument": {
+              "type": "Identifier",
+              "name": "x"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sourceType": "module"
+}
