@@ -7,13 +7,11 @@ const STRING_REGEX = /^("+)/;
 const CHARACTER_REGEX = /^([A-Za-z0-9\.%]+)/;
 const SPACE_REGEX = /^(\s+)/;
 
-class LineTokens {
+class Line {
     constructor(line, index) {
-        this.line = line;
-        this.index = index;
-        this.tokenize();
-    }
-    tokenize() {
+        this.text = line;
+        this.row = index;
+
         // First, pull any existing, valid comment out of the line
         this.findComments();
 
@@ -21,46 +19,58 @@ class LineTokens {
         this.findIndentation();
 
         // Split the remainder of the line by whitespace to determine the macro-token groups
-        this.createTokenGroups();
+        this.tokenize();
     }
     findComments() {
         let index = 0;
+
+        // A comment is marked in MUMPS by a semicolon. We want to make sure, though, that
+        // when we look for comments, we're not including semicolons contained within strings.
         let isString = false;
-        while (index < this.line.length) {
-            if (this.line[index] === '"') {
+        while (index < this.text.length) {
+            if (this.text[index] === '"') {
                 isString = !isString;
-            } else if (this.line[index] === ';' && !isString) {
-                this.comment = this.line.slice(index + 1).trim();
-                this.line = _.trimEnd(this.line.slice(0, index));
+            } else if (this.text[index] === ';' && !isString) {
+                this.comment = {
+                    type: 'Comment',
+                    row: this.row,
+                    column: index,
+                    text: this.text.slice(index + 1).trim()
+                }
+                this.text = _.trimEnd(this.text.slice(0, index));
                 break;
             }
             index += 1;
         }
     }
     findIndentation() {
+        this.column = 0;
         this.indentation = 0;
+
         let index = 0;
-        while ((index < this.line.length) && (!/\w/.test(this.line[index]))) {
-            if ((this.line[index] === ' ') && (this.indentation < 1)) {
+        while ((index < this.text.length) && (!/\w/.test(this.text[index]))) {
+            if ((this.text[index] === ' ') && (this.indentation < 1)) {
                 this.indentation = 1;
-            } else if ((this.line[index] === '.') && (this.indentation >= 1)) {
+            } else if ((this.text[index] === '.') && (this.indentation >= 1)) {
                 this.indentation += 1;
             }
 
             index += 1;
         }
-        this.line = ((index < this.line.length) ? this.line.slice(index) : '');
+        this.text = ((index < this.text.length) ? this.text.slice(index) : '');
+        this.column = index;
     }
-    createChunks(line) {
+    createChunks() {
         // We want to split a line of text by spaces, but we also want to ignore the split if
         // those spaces are caught in-between quotation marks. So we implement our own special
         // split function that handles quote-captured spaces. The strategy here is to iterate
         // one character at a time and build substrings as we go, noting the "is string" state
         // as we iterate
-        let currLine = line;
+        let currLine = this.text;
         let chunks = [];
         let quoteCount = 0;
         let currChunk = '';
+        let index = this.column;
 
         while (currLine.length > 0) {
             const currChar = currLine[0];
@@ -81,9 +91,20 @@ class LineTokens {
                 const spaces = spaceMatch[0];
 
                 if (quoteCount % 2 === 0) {
-                    chunks.push(currChunk);
+                    chunks.push({
+                        value: currChunk,
+                        row: this.row,
+                        column: index,
+                    });
+                    index += (currChunk.length + 1);
+
                     if (spaces.length > 1) {
-                        chunks.push(spaces);
+                        chunks.push({
+                            value: spaces,
+                            row: this.row,
+                            column: index,
+                        });
+                        index += (spaces.length + 1);
                     }
                     currChunk = '';
                 }
@@ -100,16 +121,22 @@ class LineTokens {
             }
         }
         if (currChunk !== '') {
-            chunks.push(currChunk);
+            chunks.push({
+                value: currChunk,
+                row: this.row,
+                column: index,
+            });
+            index += (currChunk.length + 1);
         }
         return chunks;
     }
-    createTokenGroups() {
-        this.chunks = this.createChunks(this.line);
+    tokenize() {
+        this.chunks = this.createChunks();
         // console.log(this.chunks);
-        this.tokenGroups = this.chunks.map((chunk) => {
+        this.tokens = this.chunks.map((chunk) => {
             const tokens = [];
-            let currChunk = chunk;
+            let currChunk = chunk.value;
+            let column = chunk.column;
 
             while (currChunk.length > 0) {
                 // Perform a regex match search for valid MUMPS operators.
@@ -117,11 +144,15 @@ class LineTokens {
                 if (operatorMatch) {
                     const value = operatorMatch[0];
                     tokens.push({
+                        type: 'Operator',
                         value,
-                        type: 'OPERATOR',
+                        row: this.row,
+                        column,
+                        level: this.indentation,
                     });
 
                     currChunk = currChunk.slice(value.length);
+                    column += value.length;
                 }
 
                 // Perform a regex match search for alphanumeric characters at the start of the
@@ -130,13 +161,17 @@ class LineTokens {
                 const charMatch = currChunk.match(CHARACTER_REGEX);
                 if (charMatch) {
                     const value = charMatch[0];
-                    const type = isNaN(value) ? 'LITERAL' : 'NUMERIC';
+                    const type = isNaN(value) ? 'Literal' : 'Numeric';
                     tokens.push({
-                        value,
                         type,
+                        value,
+                        row: this.row,
+                        column,
+                        level: this.indentation,
                     });
 
                     currChunk = currChunk.slice(value.length);
+                    column += value.length;
                 }
 
                 // Perform a regex match search for MUMPS string literals. The rub here is that
@@ -152,7 +187,7 @@ class LineTokens {
 
                     while (quoteCount % 2 !== 0) {
                         if (currChunk.length === 0) {
-                            throw new Error(`Mismatched string error, line ${this.index}: ${chunk}`);
+                            throw new Error(`Mismatched string error, line ${this.row}: ${chunk}`);
                         }
 
                         const endStringMatch = currChunk.match(STRING_REGEX);
@@ -169,27 +204,37 @@ class LineTokens {
                     }
 
                     tokens.push({
-                        value,
-                        type: 'STRING',
+                        type: 'String',
+                        value: value.slice(1, -1),
+                        row: this.row,
+                        column,
+                        level: this.indentation,
                     })
+                    column += value.length;
                 }
 
                 const spaceMatch = (currChunk[0] === ' ');
                 if (spaceMatch) {
                     tokens.push({
+                        type: 'Separator',
                         value: '',
-                        type: 'SEPARATOR',
+                        row: this.row,
+                        column,
+                        level: this.indentation,
                     });
                     currChunk = '';
+                    column++;
                 }
 
                 if (!operatorMatch && !stringMatch && !charMatch && !spaceMatch) {
-                    throw new Error(`Invalid syntax error, line ${this.index}: ${this.line} ${JSON.stringify(tokens)}`);
+                    throw new Error(`Invalid syntax error, line ${this.row}: ${this.text} ${JSON.stringify(tokens)}`);
                 }
             }
             return tokens;
         });
+
+        this.tokens = _.flatten(this.tokens);
     }
 }
 
-module.exports = LineTokens;
+module.exports = Line;

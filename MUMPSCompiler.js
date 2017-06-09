@@ -3,7 +3,7 @@
 const fs = require('fs');
 const util = require('util');
 const _ = require('lodash');
-const LineTokens = require('./LineTokens');
+const Line = require('./Line');
 const AbstractSyntaxTree = require('./AbstractSyntaxTree');
 
 class MUMPSCompiler {
@@ -12,8 +12,8 @@ class MUMPSCompiler {
     }
     compile(fileName) {
         this.lines = this.readFile(fileName);
-        this.tokens = this.lines.map((line, index) => (new LineTokens(line, index)));
-        this.abstractSyntaxTree = new AbstractSyntaxTree(this.tokens);
+        this.linesObjects = this.lines.map((line, index) => (new Line(line, index)));
+        this.abstractSyntaxTree = new AbstractSyntaxTree(this.linesObjects);
         console.log(util.inspect(this.abstractSyntaxTree, { depth: null, colors: true }));
     }
 }
