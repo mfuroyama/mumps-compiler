@@ -1,25 +1,21 @@
 'use strict';
 
 var _ = require('lodash');
+var Program = require('./Program');
 
 class Parser {
     parse(lines) {
-        this.lines = lines;
-        this.comments = this.lines.filter(line => line.comment).map(line => line.comment);
-        this.tokens = _.flatten([].concat(this.lines.map(line => line.tokens)));
-
-        // From there, recursively create the syntax trees from the grouped line tokens.
-        // this.createRoutines();
-
-        return this.createProgram();
+        const tokens = _.flatten([].concat(lines.map(line => line.tokens)));
+        return {
+            type: 'File',
+            program: this.createProgram(tokens),
+            comments: lines.filter(line => line.comment).map(line => line.comment),
+            tokens,
+        };
     }
 
-    createProgram() {
-        return {};
-    }
-
-    walk(tokens) {
-
+    createProgram(tokens) {
+        return Program.create(tokens);
     }
 }
 
