@@ -3,18 +3,23 @@
 const fs = require('fs');
 const util = require('util');
 const _ = require('lodash');
-const Line = require('./Line');
-const AbstractSyntaxTree = require('./AbstractSyntaxTree');
+const Tokenizer = require('./tokenizer');
+const Parser = require('./parser');
 
 class MUMPSCompiler {
     readFile(fileName) {
         return fs.readFileSync(fileName, 'utf8').split('\n');
     }
     compile(fileName) {
-        this.lines = this.readFile(fileName);
-        this.linesObjects = this.lines.map((line, index) => (new Line(line, index)));
-        this.abstractSyntaxTree = new AbstractSyntaxTree(this.linesObjects);
-        console.log(util.inspect(this.abstractSyntaxTree, { depth: null, colors: true }));
+        const rawLines = this.readFile(fileName);
+
+        const tokenizer = new Tokenizer();
+        const lines = tokenizer.tokenize(rawLines);
+
+        const parser = new Parser();
+        const ast = parser.parse(lines);
+
+        console.log(util.inspect(parser, { colors: true }));
     }
 }
 
