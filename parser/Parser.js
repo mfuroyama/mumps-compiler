@@ -5,7 +5,7 @@ var Program = require('./Program');
 
 class Parser {
     parse(lines) {
-        const tokens = _.flatten([].concat(lines.map(line => line.tokens)));
+        const tokens = _.flatten([].concat(lines.map(line => line.getTokens())));
         return {
             type: 'File',
             program: this.createProgram(tokens),

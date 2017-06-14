@@ -54,7 +54,6 @@ class Line {
             } else if ((this.text[index] === '.') && (this.indentation >= 1)) {
                 this.indentation += 1;
             }
-
             index += 1;
         }
         this.text = ((index < this.text.length) ? this.text.slice(index) : '');
@@ -62,7 +61,9 @@ class Line {
     }
     tokenize() {
         this.chunks = this.createChunks();
-        this.tokens = _.flatten(this.chunks.map(this.createTokens.bind(this)));
+    }
+    getTokens() {
+        return _.flatten(this.chunks.map(chunk => chunk.tokens));
     }
     createChunks() {
         // We want to split a line of text by spaces, but we also want to ignore the split if
@@ -132,6 +133,11 @@ class Line {
             });
             index += (currChunk.length + 1);
         }
+
+        chunks.forEach((chunk) => {
+            chunk.tokens = this.createTokens(chunk);
+        });
+
         return chunks;
     }
     createTokens(chunk) {
