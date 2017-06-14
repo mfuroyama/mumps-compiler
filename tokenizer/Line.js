@@ -2,11 +2,8 @@
 
 var _ = require('lodash');
 var util = require('util');
-
-const OPERATOR_REGEX = /^(-|\+|\*{1,2}|\\|\/|#|&|!|_|\?|'*<=*|'*>=*|'*\[|'*\]{1,2}|\(|\)|'*=|'|\${1,2}|\^|,|:|@)/;
-const STRING_REGEX = /^("+)/;
-const CHARACTER_REGEX = /^([A-Za-z0-9\.%]+)/;
-const SPACE_REGEX = /^(\s+)/;
+var Chunk = require('./Chunk');
+var Pattern = require('./Pattern');
 
 class Line {
     constructor(line, index) {
@@ -82,7 +79,7 @@ class Line {
         while (currLine.length > 0) {
             const currChar = currLine[0];
             if (currChar === '"') {
-                const quoteMatch = currLine.match(STRING_REGEX);
+                const quoteMatch = currLine.match(Pattern.STRING_REGEX);
                 const quotes = quoteMatch[0];
 
                 currChunk += quotes;
@@ -94,25 +91,23 @@ class Line {
             // spaces. If so, just append, otherwise, add the current substring to the list of
             // chunks, if the string isn't empty.
             else if (currChar === ' ') {
-                const spaceMatch = currLine.match(SPACE_REGEX);
+                const spaceMatch = currLine.match(Pattern.SPACE_REGEX);
                 const spaces = spaceMatch[0];
 
                 if (quoteCount % 2 === 0) {
-                    chunks.push({
-                        value: currChunk,
+                    chunks.push(new Chunk(currChunk, {
                         row: this.row,
                         column: index,
                         level: this.indentation,
-                    });
+                    }));
                     index += (currChunk.length + 1);
 
                     if (spaces.length > 1) {
-                        chunks.push({
-                            value: spaces,
+                        chunks.push(new Chunk(spaces, {
                             row: this.row,
                             column: index,
                             level: this.indentation,
-                        });
+                        }));
                         index += (spaces.length + 1);
                     }
                     currChunk = '';
@@ -130,119 +125,15 @@ class Line {
             }
         }
         if (currChunk !== '') {
-            chunks.push({
-                value: currChunk,
+            chunks.push(new Chunk(currChunk, {
                 row: this.row,
                 column: index,
                 level: this.indentation,
-            });
+            }));
             index += (currChunk.length + 1);
         }
 
-        chunks.forEach((chunk) => {
-            chunk.tokens = this.createTokens(chunk);
-        });
-
         return chunks;
-    }
-    createTokens(chunk) {
-        const tokens = [];
-        let currChunk = chunk.value;
-        let column = chunk.column;
-
-        while (currChunk.length > 0) {
-            // Perform a regex match search for valid MUMPS operators.
-            const operatorMatch = currChunk.match(OPERATOR_REGEX);
-            if (operatorMatch) {
-                const value = operatorMatch[0];
-                tokens.push({
-                    type: 'Operator',
-                    value,
-                    row: this.row,
-                    column,
-                    level: this.indentation,
-                });
-
-                currChunk = currChunk.slice(value.length);
-                column += value.length;
-            }
-
-            // Perform a regex match search for alphanumeric characters at the start of the
-            // current string. If we found something, we save the value as either a literal
-            // or a number, depending on an 'isNaN' check.
-            const charMatch = currChunk.match(CHARACTER_REGEX);
-            if (charMatch) {
-                const value = charMatch[0];
-                const type = isNaN(value) ? 'Literal' : 'Numeric';
-                tokens.push({
-                    type,
-                    value,
-                    row: this.row,
-                    column,
-                    level: this.indentation,
-                });
-
-                currChunk = currChunk.slice(value.length);
-                column += value.length;
-            }
-
-            // Perform a regex match search for MUMPS string literals. The rub here is that
-            // literal quotation marks can be represented in a MUMPS string literal by 2
-            // consecutive double-quote marks. To mitigate this feature, once we find a group
-            // of double-quotes, we capture until we find a matching set (that is, the quote
-            // count become even). Then whatever we've captured until then is a string.
-            const stringMatch = currChunk.match(STRING_REGEX);
-            if (stringMatch) {
-                let value = stringMatch[0];
-                let quoteCount = value.length;
-                currChunk = currChunk.slice(value.length);
-
-                while (quoteCount % 2 !== 0) {
-                    if (currChunk.length === 0) {
-                        throw new Error(`Mismatched string error, line ${this.row}: ${chunk}`);
-                    }
-
-                    const endStringMatch = currChunk.match(STRING_REGEX);
-                    if (endStringMatch) {
-                        const endValue = endStringMatch[0];
-                        quoteCount += endValue.length;
-                        value += endValue;
-                        currChunk = currChunk.slice(endValue.length);
-                    }
-                    else {
-                        value += currChunk[0];
-                        currChunk = currChunk.slice(1);
-                    }
-                }
-
-                tokens.push({
-                    type: 'String',
-                    value: value.slice(1, -1),
-                    row: this.row,
-                    column,
-                    level: this.indentation,
-                })
-                column += value.length;
-            }
-
-            const spaceMatch = (currChunk[0] === ' ');
-            if (spaceMatch) {
-                tokens.push({
-                    type: 'Separator',
-                    value: '',
-                    row: this.row,
-                    column,
-                    level: this.indentation,
-                });
-                currChunk = '';
-                column++;
-            }
-
-            if (!operatorMatch && !stringMatch && !charMatch && !spaceMatch) {
-                throw new Error(`Invalid syntax error, line ${this.row}: ${this.text} ${JSON.stringify(tokens)}`);
-            }
-        }
-        return tokens;
     }
 }
 
