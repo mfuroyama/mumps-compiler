@@ -19,7 +19,7 @@ class MUMPSCompiler {
         const parser = new Parser();
         const ast = parser.parse(lines);
 
-        console.log(util.inspect(ast, { depth: null, colors: true }));
+        // console.log(util.inspect(ast, { depth: null, colors: true }));
     }
 }
 

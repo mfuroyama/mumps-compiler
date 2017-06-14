@@ -1,6 +1,7 @@
 'use strict';
 
 var _ = require('lodash');
+var util = require('util');
 
 const OPERATOR_REGEX = /^(-|\+|\*{1,2}|\\|\/|#|&|!|_|\?|'*<=*|'*>=*|'*\[|'*\]{1,2}|\(|\)|'*=|'|\${1,2}|\^|,|:|@)/;
 const STRING_REGEX = /^("+)/;
@@ -61,6 +62,7 @@ class Line {
     }
     tokenize() {
         this.chunks = this.createChunks();
+        console.log(util.inspect(this, { depth: null, colors: true }));
     }
     getTokens() {
         return _.flatten(this.chunks.map(chunk => chunk.tokens));
@@ -100,6 +102,7 @@ class Line {
                         value: currChunk,
                         row: this.row,
                         column: index,
+                        level: this.indentation,
                     });
                     index += (currChunk.length + 1);
 
@@ -108,6 +111,7 @@ class Line {
                             value: spaces,
                             row: this.row,
                             column: index,
+                            level: this.indentation,
                         });
                         index += (spaces.length + 1);
                     }
@@ -130,6 +134,7 @@ class Line {
                 value: currChunk,
                 row: this.row,
                 column: index,
+                level: this.indentation,
             });
             index += (currChunk.length + 1);
         }
