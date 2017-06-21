@@ -59,7 +59,7 @@ class Line {
     }
     tokenize() {
         this.chunks = this.createChunks();
-        console.log(util.inspect(this, { depth: null, colors: true }));
+        // console.log(util.inspect(this, { depth: null, colors: true }));
     }
     getTokens() {
         return _.flatten(this.chunks.map(chunk => chunk.tokens));

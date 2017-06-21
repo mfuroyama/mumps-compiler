@@ -17,9 +17,9 @@ class MUMPSCompiler {
         const lines = tokenizer.tokenize(rawLines);
 
         const parser = new Parser();
-        const ast = parser.parse(lines);
+        const module = parser.parse(lines);
 
-        // console.log(util.inspect(ast, { depth: null, colors: true }));
+        // console.log(util.inspect(module, { depth: null, colors: true }));
     }
 }
 
