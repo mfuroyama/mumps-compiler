@@ -14,7 +14,7 @@ class Module {
             comments: lines.filter(line => line.comment).map(line => line.comment),
         });
     }
-    walk() {
+    parse() {
         let index = 0;
         let isInLabel = false;
         let currLines = [];
@@ -39,13 +39,13 @@ class Module {
     }
     createLabel(lines) {
         const label = new Label(lines);
-        label.walk();
+        label.parse();
         this.labels.push(label);
     }
 
     static create(lines) {
         const module = new Module(lines);
-        module.walk();
+        module.parse();
 
         return module;
     }

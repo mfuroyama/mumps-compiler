@@ -1,34 +1,39 @@
 'use strict';
 
+var util = require('util');
 var _ = require('lodash');
+var Command = require('./Command');
 
 class Label {
     constructor(lines) {
-        this.lines = lines;
+        this.chunks = lines.reduce((chunks, line) => (chunks.concat(line.chunks)), []);
         this.params = [];
         this.body = [];
     }
-    walk() {
-        let index = 0;
-        while (index < this.lines.length) {
-            const line = this.lines[index];
-            if (line.indentation === 0) {
-                this.parseInitialLine(line);
-            }
+    parse() {
+        this.parseFirst();
 
-            this.parseLine(line);
-            index += 1;
+        let index = 1;
+        while (index < this.chunks.length) {
+            index = this.walk(index);
         }
-        console.log(this);
+        console.log(util.inspect(this, { depth: null, colors: true }));
     }
-    parseInitialLine(line) {
-        // Get the first chunk tokens, then parse the id and params out of there
-        const tokens = _.get(line, 'chunks[0].tokens');
+
+    parseFirst() {
+        if (this.chunks.length === 0) {
+            return;
+        }
+
+        const tokens = this.chunks[0].tokens || [];
+        if (tokens.length === 0) {
+            return;
+        }
+
         let index = 0;
+        this.id = _.get(tokens[index++], 'value');
 
-        this.id = _.get(tokens[index++], 'value', '');
-
-        let isParsingParams = ((_.get(tokens[index++], 'value', '')) === '(');
+        let isParsingParams = ((_.get(tokens[index++], 'value')) === '(');
         while (isParsingParams && (index < tokens.length)) {
             const token = tokens[index];
             if (token.type === 'Literal') {
@@ -37,12 +42,22 @@ class Label {
             if (token === ')') {
                 isParsingParams = false;
             }
-
             index += 1;
         }
     }
-    parseLine(line) {
 
+    walk(index) {
+        const chunk = this.chunks[index];
+        const tokens = chunk.tokens;
+
+        if (tokens.length === 0) {
+            return index + 1;
+        }
+
+        const command = Command.create(this.chunks[index++]);
+        this.body.push(command);
+
+        return command.parse.call(command, this.chunks, index);
     }
 }
 
